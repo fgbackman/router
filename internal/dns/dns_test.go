@@ -28,8 +28,8 @@ func query(id uint16, name string, typ uint16) []byte {
 	return binary.BigEndian.AppendUint16(b, ClassIN)
 }
 
-func rcode(resp []byte) int   { return int(resp[3] & 0xF) }
-func ancount(resp []byte) int { return int(binary.BigEndian.Uint16(resp[6:8])) }
+func rcode(resp []byte) int               { return int(resp[3] & 0xF) }
+func ancount(resp []byte) int             { return int(binary.BigEndian.Uint16(resp[6:8])) }
 func lastRdata(resp []byte, n int) []byte { return resp[len(resp)-n:] }
 
 func newServer(t *testing.T, upstream netip.AddrPort) *Server {
