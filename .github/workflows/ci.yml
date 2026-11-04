@@ -1,0 +1,35 @@
+name: ci
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - run: make test
+      - run: make universal
+      - name: pfctl accepts the generated rules
+        run: |
+          cat > /tmp/router.json <<'JSON'
+          {
+            "wan": {"interface": "en0"},
+            "lan": {"interface": "en1", "address": "192.168.50.1/24"},
+            "dhcp": {"enabled": true, "rangeStart": "192.168.50.100", "rangeEnd": "192.168.50.200", "leaseTime": "12h"},
+            "dns": {"enabled": true, "domain": "lan"},
+            "firewall": {
+              "blockInbound": true, "allowPing": true, "openPorts": ["tcp/22"],
+              "portForwards": [
+                {"name": "web", "protocol": "tcp", "externalPort": 8080, "internalIP": "192.168.50.10", "internalPort": 80},
+                {"name": "game", "protocol": "both", "externalPort": 3074, "internalIP": "192.168.50.11", "internalPort": 3074}
+              ]
+            },
+            "web": {"enabled": false},
+            "stateDir": "/tmp/router-state"
+          }
+          JSON
+          sudo ./bin/router check -config /tmp/router.json

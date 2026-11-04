@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Router · {{.St.Hostname}}</title>
+<style>
+:root{--bg:#eef1f5;--panel:#fff;--ink:#1d2430;--muted:#667085;--line:#d6dbe3;--brand:#123a6b;--brand2:#1f5aa6;--ok:#13804b;--bad:#b42318;--field:#f8fafc}
+@media (prefers-color-scheme:dark){:root{--bg:#0f141b;--panel:#171e28;--ink:#e6eaf0;--muted:#98a2b3;--line:#2a3442;--brand:#0c2546;--brand2:#5b9bf0;--ok:#4ade80;--bad:#f87171;--field:#101720}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+header{background:var(--brand);color:#fff;padding:14px 20px;display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
+header h1{margin:0;font-size:20px;letter-spacing:.5px}
+header .meta{opacity:.8;font-size:12px}
+nav{background:#0b2a50;display:flex;flex-wrap:wrap;padding:0 12px}
+nav a{color:#c9d7ea;text-decoration:none;padding:10px 14px;font-weight:600;font-size:13px;border-bottom:3px solid transparent}
+nav a.on,nav a:hover{color:#fff;border-bottom-color:#5b9bf0}
+main{max-width:1000px;margin:20px auto;padding:0 16px}
+fieldset{background:var(--panel);border:1px solid var(--line);border-radius:6px;margin:0 0 18px;padding:14px 18px}
+legend{font-weight:700;color:var(--brand2);padding:0 6px}
+.grid{display:grid;grid-template-columns:200px 1fr;gap:8px 16px;align-items:center}
+.grid label,.k{color:var(--muted)}
+.grid input[type=checkbox]{justify-self:start}
+input[type=text],input[type=number],select,textarea{width:100%;max-width:360px;padding:6px 8px;border:1px solid var(--line);border-radius:4px;background:var(--field);color:var(--ink);font:inherit}
+textarea{max-width:100%;min-height:90px;font-family:ui-monospace,Menlo,monospace;font-size:12px}
+button{background:var(--brand2);color:#fff;border:0;border-radius:4px;padding:7px 16px;font-weight:600;cursor:pointer}
+button.del{background:transparent;color:var(--bad);border:1px solid var(--bad);padding:3px 10px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{color:var(--muted);font-weight:600}
+td input{max-width:140px}
+.mono,pre{font-family:ui-monospace,Menlo,monospace;font-size:12px}
+pre{white-space:pre-wrap;margin:0}
+.flash{padding:10px 14px;border-radius:6px;margin-bottom:16px;border:1px solid}
+.flash.ok{color:var(--ok);border-color:var(--ok)}
+.flash.err{color:var(--bad);border-color:var(--bad);white-space:pre-wrap}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
+.stat .n{font-size:22px;font-weight:700}
+.hint{color:var(--muted);font-size:12px;margin:6px 0 0}
+.actions{margin-top:14px}
+@media (max-width:640px){.grid{grid-template-columns:1fr}.hide-sm{display:none}}
+</style>
+</head>
+<body>
+<header><h1>Router</h1><span class="meta">{{.St.Hostname}} · {{.St.Version}} · up {{ago .St.Started}}</span></header>
+<nav>
+<a href="/" class="{{if eq .Page "status"}}on{{end}}">Status</a>
+<a href="/setup" class="{{if eq .Page "setup"}}on{{end}}">Setup</a>
+<a href="/dhcp" class="{{if eq .Page "dhcp"}}on{{end}}">DHCP</a>
+<a href="/firewall" class="{{if eq .Page "firewall"}}on{{end}}">NAT / Firewall</a>
+<a href="/dns" class="{{if eq .Page "dns"}}on{{end}}">DNS</a>
+<a href="/pf" class="{{if eq .Page "pf"}}on{{end}}">Packet Filter</a>
+</nav>
+<main>
+{{if .Msg}}<div class="flash ok">{{.Msg}}</div>{{end}}
+{{if .Err}}<div class="flash err">{{.Err}}</div>{{end}}
+{{range .St.Errors}}<div class="flash err">{{.}}</div>{{end}}
+
+{{if eq .Page "status"}}
+<fieldset><legend>Router</legend><div class="grid">
+<span class="k">WAN</span><span class="mono">{{.St.WANIface}} {{join .St.WANAddrs ", "}}</span>
+<span class="k">LAN</span><span class="mono">{{.St.LANIface}} {{.St.LANAddr}}</span>
+<span class="k">IP forwarding</span><span>{{if eq .St.Forwarding "1"}}enabled{{else}}disabled ({{.St.Forwarding}}){{end}}</span>
+<span class="k">DNS upstreams</span><span class="mono">{{join .St.Upstreams ", "}}</span>
+</div></fieldset>
+<fieldset><legend>DNS</legend><div class="stats">
+<div class="stat"><div class="k">Queries</div><div class="n">{{.St.DNSQueries}}</div></div>
+<div class="stat"><div class="k">Blocked</div><div class="n">{{.St.DNSBlocked}}</div></div>
+<div class="stat"><div class="k">Answered locally</div><div class="n">{{.St.DNSLocal}}</div></div>
+<div class="stat"><div class="k">Forwarded</div><div class="n">{{.St.DNSForward}}</div></div>
+<div class="stat"><div class="k">Failed</div><div class="n">{{.St.DNSFailed}}</div></div>
+<div class="stat"><div class="k">Domains on blocklist</div><div class="n">{{.St.BlockedSize}}</div></div>
+</div></fieldset>
+<fieldset><legend>DHCP clients</legend>
+{{template "leases" .}}
+</fieldset>
+{{end}}
+
+{{if eq .Page "setup"}}
+<form method="post" action="/setup"><input type="hidden" name="csrf" value="{{.CSRF}}">
+<fieldset><legend>Interfaces</legend><div class="grid">
+<label for="wan">WAN interface</label><input type="text" id="wan" name="wan" value="{{.Cfg.WAN.Interface}}">
+<label for="lan">LAN interface</label><input type="text" id="lan" name="lan" value="{{.Cfg.LAN.Interface}}">
+<label for="lanaddr">Router LAN address</label><input type="text" id="lanaddr" name="lanaddr" value="{{.Cfg.LAN.Address}}">
+<label for="configaddr">Assign address</label><label><input type="checkbox" id="configaddr" name="configaddr" {{if .Cfg.LAN.ConfigureAddress}}checked{{end}}> add it to the LAN interface on start</label>
+</div><p class="hint">Run <code>router interfaces</code> in Terminal to see device names (en0, en5, …).</p></fieldset>
+<fieldset><legend>DHCP server</legend><div class="grid">
+<label for="dhcp">Enabled</label><input type="checkbox" id="dhcp" name="dhcp" {{if .Cfg.DHCP.Enabled}}checked{{end}}>
+<label for="start">Range start</label><input type="text" id="start" name="start" value="{{.Cfg.DHCP.RangeStart}}">
+<label for="end">Range end</label><input type="text" id="end" name="end" value="{{.Cfg.DHCP.RangeEnd}}">
+<label for="lease">Lease time</label><input type="text" id="lease" name="lease" value="{{.Cfg.DHCP.LeaseTime}}">
+</div></fieldset>
+<div class="actions"><button>Save &amp; apply</button></div>
+</form>
+{{end}}
+
+{{if eq .Page "dhcp"}}
+<fieldset><legend>Active leases</legend>{{template "leases" .}}</fieldset>
+<fieldset><legend>Static leases</legend>
+<table><tr><th>MAC</th><th>IP</th><th>Hostname</th><th></th></tr>
+{{range $i, $l := .Cfg.DHCP.StaticLeases}}
+<tr><td class="mono">{{$l.MAC}}</td><td class="mono">{{$l.IP}}</td><td>{{$l.Hostname}}</td>
+<td><form method="post" action="/static/delete"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="i" value="{{$i}}"><button class="del">Remove</button></form></td></tr>
+{{end}}
+<tr>
+<td><input form="addstatic" type="text" name="mac" placeholder="aa:bb:cc:dd:ee:ff" aria-label="MAC"></td>
+<td><input form="addstatic" type="text" name="ip" placeholder="192.168.50.20" aria-label="IP"></td>
+<td><input form="addstatic" type="text" name="host" placeholder="nas" aria-label="Hostname"></td>
+<td><button form="addstatic">Add</button></td></tr>
+</table>
+<form id="addstatic" method="post" action="/static/add"><input type="hidden" name="csrf" value="{{.CSRF}}"></form>
+</fieldset>
+{{end}}
+
+{{if eq .Page "firewall"}}
+<fieldset><legend>Port forwarding</legend>
+<table><tr><th>Name</th><th>Proto</th><th>External port</th><th>To IP</th><th>Port</th><th></th></tr>
+{{range $i, $f := .Cfg.Firewall.PortForwards}}
+<tr><td>{{$f.Name}}</td><td>{{$f.Protocol}}</td><td>{{$f.ExternalPort}}</td><td class="mono">{{$f.InternalIP}}</td><td>{{$f.InternalPort}}</td>
+<td><form method="post" action="/forward/delete"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="i" value="{{$i}}"><button class="del">Remove</button></form></td></tr>
+{{end}}
+<tr>
+<td><input form="addfwd" type="text" name="name" placeholder="web server" aria-label="Name"></td>
+<td><select form="addfwd" name="proto" aria-label="Protocol"><option>tcp</option><option>udp</option><option>both</option></select></td>
+<td><input form="addfwd" type="number" name="ext" min="1" max="65535" aria-label="External port"></td>
+<td><input form="addfwd" type="text" name="ip" placeholder="192.168.50.10" aria-label="Internal IP"></td>
+<td><input form="addfwd" type="number" name="int" min="1" max="65535" aria-label="Internal port"></td>
+<td><button form="addfwd">Add</button></td></tr>
+</table>
+<form id="addfwd" method="post" action="/forward/add"><input type="hidden" name="csrf" value="{{.CSRF}}"></form>
+</fieldset>
+<form method="post" action="/firewall"><input type="hidden" name="csrf" value="{{.CSRF}}">
+<fieldset><legend>WAN firewall</legend><div class="grid">
+<label for="block">Block unsolicited inbound</label><input type="checkbox" id="block" name="block" {{if .Cfg.Firewall.BlockInbound}}checked{{end}}>
+<label for="ping">Answer ping on WAN</label><input type="checkbox" id="ping" name="ping" {{if .Cfg.Firewall.AllowPing}}checked{{end}}>
+<label for="open">Open ports on this Mac</label><input type="text" id="open" name="open" value="{{join .Cfg.Firewall.OpenPorts " "}}" placeholder="tcp/22 udp/51820">
+</div><p class="hint">IPv4 only. IPv6 traffic isn't routed and keeps the default macOS firewall policy.</p>
+<div class="actions"><button>Save &amp; apply</button></div></fieldset>
+</form>
+{{end}}
+
+{{if eq .Page "dns"}}
+<form method="post" action="/dns"><input type="hidden" name="csrf" value="{{.CSRF}}">
+<fieldset><legend>Resolver</legend><div class="grid">
+<label for="enabled">Enabled</label><input type="checkbox" id="enabled" name="enabled" {{if .Cfg.DNS.Enabled}}checked{{end}}>
+<label for="domain">Local domain</label><input type="text" id="domain" name="domain" value="{{.Cfg.DNS.Domain}}">
+<label for="upstreams">Upstream servers</label><input type="text" id="upstreams" name="upstreams" value="{{join .Cfg.DNS.Upstreams " "}}" placeholder="empty = use the Mac's DNS">
+</div></fieldset>
+<fieldset><legend>Local hosts</legend>
+<textarea name="hosts" aria-label="Local hosts" placeholder="192.168.50.20 nas">{{hosts .Cfg.DNS.Hosts}}</textarea>
+<p class="hint">One "IP name" per line. DHCP clients are added as &lt;hostname&gt;.{{.Cfg.DNS.Domain}} automatically.</p></fieldset>
+<fieldset><legend>Blocking</legend>
+<label class="k" for="blocked">Blocked domains (subdomains included)</label>
+<textarea id="blocked" name="blocked">{{join .Cfg.DNS.BlockedDomains "\n"}}</textarea>
+<label class="k" for="lists">Blocklist files or URLs, one per line</label>
+<textarea id="lists" name="lists" placeholder="https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts">{{join .Cfg.DNS.Blocklists "\n"}}</textarea>
+<div class="actions"><button>Save &amp; apply</button></div></fieldset>
+</form>
+{{end}}
+
+{{if eq .Page "pf"}}
+<fieldset><legend>Anchor com.apple/router</legend><pre>{{.St.PF}}</pre></fieldset>
+{{end}}
+</main>
+</body>
+</html>
+{{define "leases"}}
+{{if .St.Leases}}
+<table><tr><th>Hostname</th><th>IP</th><th>MAC</th><th class="hide-sm">Expires in</th></tr>
+{{range .St.Leases}}<tr><td>{{if .Hostname}}{{.Hostname}}{{else}}<span class="k">—</span>{{end}}</td><td class="mono">{{.IP}}</td><td class="mono">{{.MAC}}</td><td class="hide-sm">{{if .Static}}static{{else}}{{until .Expires}}{{end}}</td></tr>{{end}}
+</table>
+{{else}}<p class="hint">No clients yet.</p>{{end}}
+{{end}}
