@@ -61,6 +61,8 @@ jobs:
           sleep 12
           pgrep -x Router || (echo "app is not running"; exit 1)
           screencapture -x app.png
+          sips -Z 1400 -s format jpeg -s formatOptions 70 app.png --out small.jpg >/dev/null
+          echo "SCREENSHOT-BEGIN"; base64 -i small.jpg | fold -w 1000; echo "SCREENSHOT-END"
       - uses: actions/upload-artifact@v4
         with:
           name: screenshot
