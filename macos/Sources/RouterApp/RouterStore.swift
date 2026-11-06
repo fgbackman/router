@@ -41,6 +41,8 @@ final class RouterStore: ObservableObject {
     private var cachedPassword: (user: String, password: String)?
 
     private var password: String {
+        // For automated UI checks (CI), which can't answer keychain prompts.
+        if let p = ProcessInfo.processInfo.environment["ROUTER_APP_PASSWORD"] { return p }
         if let c = cachedPassword, c.user == user { return c.password }
         let p = Keychain.password(for: user) ?? ""
         cachedPassword = (user, p)

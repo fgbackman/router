@@ -56,8 +56,7 @@ jobs:
         run: |
           go run ./.github/demo &
           for i in $(seq 1 30); do curl -sf -u admin:demo-password http://127.0.0.1:8080/api/status >/dev/null && break; sleep 1; done
-          security add-generic-password -U -A -s com.fgbackman.router.app -a admin -w demo-password
-          open macos/build/Router.app
+          ROUTER_APP_PASSWORD=demo-password macos/build/Router.app/Contents/MacOS/Router &
           sleep 12
           pgrep -x Router || (echo "app is not running"; exit 1)
           screencapture -x app.png
