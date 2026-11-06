@@ -36,9 +36,20 @@ final class RouterStore: ObservableObject {
 
     var isOnline: Bool { connection == .online }
 
+    /// Read from the keychain once per user name; reading it on every poll
+    /// could trigger repeated keychain prompts.
+    private var cachedPassword: (user: String, password: String)?
+
+    private var password: String {
+        if let c = cachedPassword, c.user == user { return c.password }
+        let p = Keychain.password(for: user) ?? ""
+        cachedPassword = (user, p)
+        return p
+    }
+
     var client: APIClient? {
         guard let url = URL(string: urlString) else { return nil }
-        return APIClient(baseURL: url, user: user, password: Keychain.password(for: user) ?? "")
+        return APIClient(baseURL: url, user: user, password: password)
     }
 
     func refresh() async {
@@ -93,6 +104,7 @@ final class RouterStore: ObservableObject {
 
     func savePassword(_ password: String) {
         Keychain.setPassword(password, for: user)
+        cachedPassword = (user, password)
         Task { await refresh() }
     }
 
