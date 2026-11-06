@@ -2,7 +2,7 @@ VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS := -s -w -X main.version=$(VERSION)
 PREFIX  ?= /usr/local
 
-.PHONY: build universal test install uninstall clean
+.PHONY: build universal test install uninstall clean app install-app
 
 build:
 	rm -f bin/router
@@ -30,5 +30,13 @@ uninstall:
 	-$(PREFIX)/bin/router uninstall
 	rm -f $(PREFIX)/bin/router
 
+# The SwiftUI front end (macos/). Needs Xcode or the Command Line Tools.
+app:
+	./macos/build-app.sh
+
+install-app: app
+	rm -rf /Applications/Router.app
+	cp -R macos/build/Router.app /Applications/
+
 clean:
-	rm -rf bin
+	rm -rf bin macos/build macos/.build

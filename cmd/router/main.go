@@ -5,6 +5,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -41,6 +42,7 @@ Setup:
 Running:
   run                  run in the foreground (Ctrl-C restores the system)
   install              install and start as a LaunchDaemon (starts at boot)
+  start / stop         start or stop the installed LaunchDaemon (stop lasts until reboot)
   uninstall            stop and remove the LaunchDaemon
   reload               make the running service reread its config
   status               show what's running
@@ -60,7 +62,7 @@ func main() {
 	var err error
 	switch cmd {
 	case "interfaces":
-		err = cmdInterfaces()
+		err = cmdInterfaces(args)
 	case "init":
 		err = cmdInit(args)
 	case "passwd":
@@ -73,6 +75,10 @@ func main() {
 		err = cmdInstall(args)
 	case "uninstall":
 		err = needRoot(system.Uninstall)
+	case "start":
+		err = needRoot(system.Start)
+	case "stop":
+		err = needRoot(system.Stop)
 	case "reload":
 		err = needRoot(system.Reload)
 	case "status":
@@ -122,11 +128,35 @@ func needRoot(f func() error) error {
 	return f()
 }
 
-func cmdInterfaces() error {
+func cmdInterfaces(args []string) error {
+	fs := flag.NewFlagSet("interfaces", flag.ExitOnError)
+	asJSON := fs.Bool("json", false, "print JSON (used by the Mac app)")
+	fs.Parse(args)
 	if err := requireMac(); err != nil {
 		return err
 	}
 	def := system.DefaultRouteInterface()
+	if *asJSON {
+		type row struct {
+			Device       string   `json:"device"`
+			Port         string   `json:"port"`
+			MAC          string   `json:"mac"`
+			Up           bool     `json:"up"`
+			Addresses    []string `json:"addresses"`
+			DefaultRoute bool     `json:"defaultRoute"`
+		}
+		rows := []row{}
+		for _, i := range system.Interfaces() {
+			as := []string{}
+			for _, a := range i.Addrs {
+				as = append(as, a.String())
+			}
+			rows = append(rows, row{i.Device, i.Port, i.MAC, i.Up, as, i.Device == def})
+		}
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "  ")
+		return enc.Encode(rows)
+	}
 	tw := tabwriter.NewWriter(os.Stdout, 0, 4, 2, ' ', 0)
 	fmt.Fprintln(tw, "DEVICE\tPORT\tSTATE\tIPv4\tMAC\t")
 	for _, i := range system.Interfaces() {
@@ -164,7 +194,7 @@ func cmdInit(args []string) error {
 		*wan = system.DefaultRouteInterface()
 	}
 	if *lan == "" || *wan == "" {
-		cmdInterfaces()
+		cmdInterfaces(nil)
 		return errors.New("pass -lan DEVICE (and -wan DEVICE if no default route) from the list above")
 	}
 	c := config.Default(*wan, *lan)

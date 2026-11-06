@@ -133,3 +133,43 @@ func TestDNSForm(t *testing.T) {
 		t.Fatalf("dns form: %+v", c)
 	}
 }
+
+func apiReq(h http.Handler, method, path, body string, client bool) *httptest.ResponseRecorder {
+	r := httptest.NewRequest(method, path, strings.NewReader(body))
+	r.SetBasicAuth("admin", "correct horse")
+	r.Header.Set("Content-Type", "application/json")
+	if client {
+		r.Header.Set(APIClientHeader, "test")
+	}
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	return w
+}
+
+func TestAPI(t *testing.T) {
+	fb, h := setup(t)
+	w := apiReq(h, "GET", "/api/status", "", false)
+	if w.Code != 200 || !strings.Contains(w.Body.String(), `"hostname":"mac"`) || !strings.Contains(w.Body.String(), `"leases":[]`) {
+		t.Fatalf("status: %d %s", w.Code, w.Body)
+	}
+	w = apiReq(h, "GET", "/api/config", "", false)
+	if w.Code != 200 || strings.Contains(w.Body.String(), "pbkdf2") || !strings.Contains(w.Body.String(), `"leaseTime":"12h0m0s"`) {
+		t.Fatalf("config leaked hash or wrong: %s", w.Body)
+	}
+	body := strings.Replace(w.Body.String(), `"allowPing":false`, `"allowPing":true`, 1)
+
+	if w := apiReq(h, "PUT", "/api/config", body, false); w.Code != 403 {
+		t.Fatalf("PUT without client header must be refused, got %d", w.Code)
+	}
+	hash := fb.cfg.Web.PasswordHash
+	if w := apiReq(h, "PUT", "/api/config", body, true); w.Code != 200 {
+		t.Fatalf("PUT: %d %s", w.Code, w.Body)
+	}
+	if !fb.cfg.Firewall.AllowPing || fb.cfg.Web.PasswordHash != hash {
+		t.Fatal("PUT not applied or password hash lost")
+	}
+	bad := strings.Replace(body, `"interface":"en5"`, `"interface":"en0"`, 1)
+	if w := apiReq(h, "PUT", "/api/config", bad, true); w.Code != 400 || !strings.Contains(w.Body.String(), "must differ") {
+		t.Fatalf("invalid config: %d %s", w.Code, w.Body)
+	}
+}

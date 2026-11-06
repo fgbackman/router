@@ -7,6 +7,7 @@ import (
 	"crypto/subtle"
 	"embed"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"html/template"
@@ -28,24 +29,24 @@ var templateFS embed.FS
 
 // Status is what the daemon reports to the UI.
 type Status struct {
-	Version     string
-	Started     time.Time
-	Hostname    string
-	WANIface    string
-	WANAddrs    []netip.Prefix
-	LANIface    string
-	LANAddr     string
-	Forwarding  string
-	Leases      []dhcp.Lease
-	DNSQueries  uint64
-	DNSBlocked  uint64
-	DNSLocal    uint64
-	DNSForward  uint64
-	DNSFailed   uint64
-	BlockedSize int
-	Upstreams   []netip.AddrPort
-	PF          string
-	Errors      []string
+	Version     string           `json:"version"`
+	Started     time.Time        `json:"started"`
+	Hostname    string           `json:"hostname"`
+	WANIface    string           `json:"wanInterface"`
+	WANAddrs    []netip.Prefix   `json:"wanAddresses"`
+	LANIface    string           `json:"lanInterface"`
+	LANAddr     string           `json:"lanAddress"`
+	Forwarding  string           `json:"forwarding"`
+	Leases      []dhcp.Lease     `json:"leases"`
+	DNSQueries  uint64           `json:"dnsQueries"`
+	DNSBlocked  uint64           `json:"dnsBlocked"`
+	DNSLocal    uint64           `json:"dnsLocal"`
+	DNSForward  uint64           `json:"dnsForwarded"`
+	DNSFailed   uint64           `json:"dnsFailed"`
+	BlockedSize int              `json:"blocklistSize"`
+	Upstreams   []netip.AddrPort `json:"upstreams"`
+	PF          string           `json:"pf"`
+	Errors      []string         `json:"errors"`
 }
 
 // Backend is implemented by the daemon.
@@ -144,6 +145,9 @@ func (s *Server) Handler() (http.Handler, error) {
 	mux.HandleFunc("POST /static/add", s.post("/dhcp", s.addStatic))
 	mux.HandleFunc("POST /static/delete", s.post("/dhcp", s.deleteStatic))
 	mux.HandleFunc("POST /dns", s.post("/dns", s.saveDNS))
+	mux.HandleFunc("GET /api/status", s.apiStatus)
+	mux.HandleFunc("GET /api/config", s.apiGetConfig)
+	mux.HandleFunc("PUT /api/config", s.apiPutConfig)
 	return s.secure(mux), nil
 }
 
@@ -196,7 +200,14 @@ func (s *Server) secure(next http.Handler) http.Handler {
 			http.Error(w, "authentication required", http.StatusUnauthorized)
 			return
 		}
-		if r.Method == http.MethodPost {
+		if strings.HasPrefix(r.URL.Path, "/api/") {
+			// Browsers can't add custom headers cross-origin without a CORS
+			// preflight (which we never approve), so this header blocks CSRF.
+			if r.Method != http.MethodGet && r.Header.Get(APIClientHeader) == "" {
+				writeJSON(w, http.StatusForbidden, apiError{"missing " + APIClientHeader + " header"})
+				return
+			}
+		} else if r.Method == http.MethodPost {
 			if origin := r.Header.Get("Origin"); origin != "" && origin != "null" {
 				u, err := url.Parse(origin)
 				if err != nil || u.Host != r.Host {
@@ -360,4 +371,55 @@ func (s *Server) saveDNS(c *config.Config, r *http.Request) error {
 		c.DNS.Hosts = append(c.DNS.Hosts, config.HostRecord{IP: f[0], Name: f[1]})
 	}
 	return nil
+}
+
+// APIClientHeader must be sent with every non-GET /api/ request.
+const APIClientHeader = "X-Router-Client"
+
+type apiError struct {
+	Error string `json:"error"`
+}
+
+func writeJSON(w http.ResponseWriter, code int, v any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	_ = json.NewEncoder(w).Encode(v)
+}
+
+func (s *Server) apiStatus(w http.ResponseWriter, r *http.Request) {
+	st := s.Backend.Status()
+	if st.Leases == nil {
+		st.Leases = []dhcp.Lease{}
+	}
+	writeJSON(w, http.StatusOK, st)
+}
+
+func (s *Server) apiGetConfig(w http.ResponseWriter, r *http.Request) {
+	c := s.Backend.Config()
+	c.Web.PasswordHash = "" // never leaves the server
+	writeJSON(w, http.StatusOK, c)
+}
+
+func (s *Server) apiPutConfig(w http.ResponseWriter, r *http.Request) {
+	cur := s.Backend.Config()
+	var c config.Config
+	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&c); err != nil {
+		writeJSON(w, http.StatusBadRequest, apiError{"bad JSON: " + err.Error()})
+		return
+	}
+	// The password and state directory are only changed from the command line.
+	c.Web.PasswordHash = cur.Web.PasswordHash
+	c.StateDir = cur.StateDir
+	if c.DHCP.LeaseTime.Duration == 0 {
+		c.DHCP.LeaseTime = cur.DHCP.LeaseTime
+	}
+	if err := s.Backend.Apply(&c); err != nil {
+		writeJSON(w, http.StatusBadRequest, apiError{err.Error()})
+		return
+	}
+	out := c.Clone() // Apply may keep &c; don't blank its hash
+	out.Web.PasswordHash = ""
+	writeJSON(w, http.StatusOK, out)
 }

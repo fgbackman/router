@@ -278,3 +278,25 @@ func Reload() error {
 	_, err := Run("/bin/launchctl", "kill", "HUP", "system/"+Label)
 	return err
 }
+
+// Start loads the installed LaunchDaemon.
+func Start() error {
+	if !Installed() {
+		return errors.New("not installed; run `sudo router install` first")
+	}
+	if ServiceRunning() {
+		return nil
+	}
+	_, err := Run("/bin/launchctl", "bootstrap", "system", PlistPath)
+	return err
+}
+
+// Stop unloads the LaunchDaemon until the next Start or reboot. The daemon
+// restores forwarding, the LAN address and pf rules as it exits.
+func Stop() error {
+	if !ServiceRunning() {
+		return nil
+	}
+	_, err := Run("/bin/launchctl", "bootout", "system/"+Label)
+	return err
+}

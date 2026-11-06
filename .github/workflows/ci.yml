@@ -33,3 +33,19 @@ jobs:
           }
           JSON
           sudo ./bin/router check -config /tmp/router.json
+
+  app:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Router.app (universal)
+        run: UNIVERSAL=1 ./macos/build-app.sh
+      - name: Check bundle
+        run: |
+          plutil -lint macos/build/Router.app/Contents/Info.plist
+          lipo -info macos/build/Router.app/Contents/MacOS/Router
+          codesign --verify --verbose macos/build/Router.app
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Router.app
+          path: macos/build/Router.app
