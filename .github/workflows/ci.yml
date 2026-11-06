@@ -49,3 +49,19 @@ jobs:
         with:
           name: Router.app
           path: macos/build/Router.app
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Launch the app against a demo router and screenshot it
+        run: |
+          go run ./.github/demo &
+          for i in $(seq 1 30); do curl -sf -u admin:demo-password http://127.0.0.1:8080/api/status >/dev/null && break; sleep 1; done
+          security add-generic-password -U -s com.fgbackman.router.app -a admin -w demo-password
+          open macos/build/Router.app
+          sleep 12
+          pgrep -x Router || (echo "app is not running"; exit 1)
+          screencapture -x app.png
+      - uses: actions/upload-artifact@v4
+        with:
+          name: screenshot
+          path: app.png

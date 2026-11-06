@@ -88,6 +88,7 @@ That puts `router` in `/usr/local/bin`. Building needs Go 1.24+ (`brew install g
 | Command | What it does |
 |---|---|
 | `router status` | Service state, addresses, DHCP clients and pf rules (with sudo) |
+| `sudo router start` / `stop` | Start or stop the installed service (a stop lasts until reboot) |
 | `sudo router reload` | Reread the config file without dropping the network |
 | `sudo router uninstall` | Stop the service and restore the system |
 | `sudo router down` | Undo leftover changes after a crash (forwarding, LAN address, pf rules) |
@@ -145,6 +146,39 @@ Notes:
   `stateDir` so blocking keeps working when the internet is down. Blocked names
   resolve to `0.0.0.0` / `::`.
 - Names under the local domain and reverse lookups for the LAN are never sent upstream.
+
+## Mac app
+
+`macos/` holds a native SwiftUI app for managing the router. It has a main
+window and a menu bar icon, and covers:
+
+- **Status:** WAN and LAN addresses, DNS counters and any service errors
+- **Clients:** devices on the network; right-click one to reserve its address
+- **Port Forwarding, Firewall, DNS, Network:** edit and apply the settings live
+- **Set Up Router…:** pick the internet and LAN ports and a password; the app
+  writes the config and installs the service
+- **Start, Stop and Restart** from the toolbar or the menu bar
+
+Build and install it (needs Xcode or the Command Line Tools):
+
+```bash
+make install-app
+```
+
+The app needs the `router` command in `/usr/local/bin` (see Install above). It
+talks to the running service through the admin API at `web.listen`, keeps
+the admin password in your keychain, and uses the standard macOS
+administrator prompt for anything that needs root (setup, start, stop).
+
+The API it uses is also available to scripts:
+
+| Request | Result |
+|---|---|
+| `GET /api/status` | Status, leases and DNS counters |
+| `GET /api/config` | The config, without the password hash |
+| `PUT /api/config` | Validate, save and apply a full config. Requires an `X-Router-Client` header. |
+
+All requests use the admin user and password (HTTP Basic auth).
 
 ## How it works
 
