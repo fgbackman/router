@@ -180,6 +180,36 @@ The API it uses is also available to scripts:
 
 All requests use the admin user and password (HTTP Basic auth).
 
+## iPhone app
+
+`ios/` holds an iPhone (and iPad) app for the same router. It has four tabs:
+
+- **Status:** whether the router is up, how many devices are connected, DNS blocking stats and network details
+- **Devices:** everything on the network; swipe left to reserve a device's address
+- **Ports:** add or remove port forwards
+- **Settings:** firewall and DNS switches and blocked domains
+
+The phone talks to the router over your local network, so:
+
+1. On the Mac, turn on **Network › Allow devices on the local network** in the
+   Mac app (or set `"allowLAN": true` under `web` in the config). New configs
+   have it on already.
+2. Connect the phone to the router's network: Wi-Fi from an access point
+   plugged into the router's LAN port.
+3. In the app, the router address is `http://192.168.50.1:8080`. Sign in with
+   the admin user and password.
+
+Starting and stopping the router, and changing its ports, stays in the Mac app.
+
+**Installing it on your phone:** open `ios/Router.xcodeproj` in Xcode (16 or
+newer). Select the **Router** target, open **Signing & Capabilities**, and pick
+your team. A free Apple ID works; if Xcode says the bundle identifier is taken,
+change it to something unique such as `com.yourname.router`. Plug in your
+iPhone, choose it as the run destination and press Run. The first time,
+approve the developer on the phone under **Settings › General › VPN & Device
+Management**. Apps signed with a free Apple ID stop opening after 7 days; run
+them from Xcode again to renew.
+
 ## How it works
 
 | Piece | Implementation |

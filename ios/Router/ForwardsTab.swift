@@ -54,7 +54,7 @@ struct ForwardRow: View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(forward.name.isEmpty ? "Port \(forward.externalPort)" : forward.name).font(.body.weight(.medium))
-                Text("\(deviceName ?? forward.internalIP):\(forward.internalPort)")
+                Text(verbatim: "\(deviceName ?? forward.internalIP):\(forward.internalPort)")
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(.secondary)
             }

@@ -151,7 +151,7 @@ struct PortForwardsView: View {
                     TableColumn("Name", value: \.name)
                     TableColumn("Protocol") { f in Text(f.protocol.uppercased()) }
                     TableColumn("External port") { f in Text(String(f.externalPort)).monospacedDigit() }
-                    TableColumn("Device") { f in Text("\(f.internalIP):\(f.internalPort)").monospacedDigit() }
+                    TableColumn("Device") { f in Text(verbatim: "\(f.internalIP):\(f.internalPort)").monospacedDigit() }
                     TableColumn("") { f in
                         Button(role: .destructive) {
                             Task { await store.update { $0.firewall.portForwards.removeAll { $0 == f } } }
