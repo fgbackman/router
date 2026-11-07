@@ -76,11 +76,13 @@ jobs:
           go-version-file: go.mod
       - name: Build for the iOS Simulator
         run: |
+          set -o pipefail
           xcodebuild -project ios/Router.xcodeproj -target Router -configuration Debug \
-            -sdk iphonesimulator CODE_SIGNING_ALLOWED=NO SYMROOT="$PWD/ios/build" build | tail -n 40
-          test -d ios/build/Debug-iphonesimulator/Router.app
+            -sdk iphonesimulator CODE_SIGNING_ALLOWED=NO SYMROOT="$PWD/ios/build" build | grep -E "error:|warning: .*/ios/|BUILD"
+          test -x ios/build/Debug-iphonesimulator/Router.app/Router
       - name: Build for devices (unsigned)
         run: |
+          set -o pipefail
           xcodebuild -project ios/Router.xcodeproj -target Router -configuration Release \
             -sdk iphoneos CODE_SIGNING_ALLOWED=NO SYMROOT="$PWD/ios/build" build | tail -n 5
       - name: Run against a demo router and screenshot each tab

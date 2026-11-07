@@ -63,13 +63,13 @@ struct HeroCard: View {
             Spacer(minLength: 0)
         }
         .padding(18)
-        .background(
+        .background {
             ZStack {
                 Brand.background
                 RadialGradient(colors: [Brand.cyan.opacity(0.25), .clear], center: .leading, startRadius: 10, endRadius: 220)
-            },
-            in: RoundedRectangle(cornerRadius: 22, style: .continuous)
-        )
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        }
         .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(.white.opacity(0.1)))
         .shadow(color: Brand.night.opacity(0.3), radius: 12, y: 6)
     }
