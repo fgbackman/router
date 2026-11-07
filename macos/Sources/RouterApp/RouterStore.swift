@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import SwiftUI
 
@@ -36,6 +37,24 @@ final class RouterStore: ObservableObject {
 
     var isOnline: Bool { connection == .online }
 
+    var menuBarState: MenuBarIcon.State {
+        switch connection {
+        case .online: return (status?.errors.isEmpty ?? true) ? .online : .attention
+        case .connecting: return .connecting
+        case .unauthorized, .locked: return .attention
+        case .offline: return .offline
+        }
+    }
+
+    /// Shows the number of problems the router reports on the Dock icon.
+    private func updateDockBadge() {
+        let n = connection == .online ? (status?.errors.count ?? 0) : 0
+        let label = n > 0 ? String(n) : nil
+        if NSApp.dockTile.badgeLabel != label {
+            NSApp.dockTile.badgeLabel = label
+        }
+    }
+
     /// Read from the keychain once per user name; reading it on every poll
     /// could trigger repeated keychain prompts.
     private var cachedPassword: (user: String, password: String)?
@@ -73,6 +92,7 @@ final class RouterStore: ObservableObject {
         } catch {
             connection = .offline(error.localizedDescription)
         }
+        updateDockBadge()
     }
 
     func reloadConfig() async {

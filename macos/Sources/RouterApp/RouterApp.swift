@@ -26,7 +26,7 @@ struct RouterApp: App {
         MenuBarExtra {
             MenuBarView().environmentObject(store)
         } label: {
-            Image(systemName: store.isOnline ? "network" : "network.slash")
+            Image(nsImage: MenuBarIcon.image(store.menuBarState))
         }
         .menuBarExtraStyle(.window)
 

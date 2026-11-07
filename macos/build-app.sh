@@ -13,6 +13,7 @@ APP=build/Router.app
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/Router"
+cp Icon/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 sed "s/__VERSION__/${VERSION#v}/g" Info.plist > "$APP/Contents/Info.plist"
 codesign --force --sign - "$APP"
 echo "Built $(pwd)/$APP"
