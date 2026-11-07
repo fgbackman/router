@@ -80,6 +80,17 @@ jobs:
           xcodebuild -project ios/Router.xcodeproj -target Router -configuration Debug \
             -sdk iphonesimulator CODE_SIGNING_ALLOWED=NO SYMROOT="$PWD/ios/build" build | grep -E "error:|warning: .*/ios/|BUILD"
           test -x ios/build/Debug-iphonesimulator/Router.app/Router
+      - name: Shared scheme builds
+        run: |
+          set -o pipefail
+          xcodebuild -project ios/Router.xcodeproj -scheme Router -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath ios/build/dd CODE_SIGNING_ALLOWED=NO build | grep -E "error:|BUILD"
+      - name: install.sh explains a missing iPhone
+        run: |
+          set +e
+          out=$(TEAM=ABCDE12345 ./ios/install.sh 2>&1); code=$?
+          echo "$out"
+          [ $code -ne 0 ] && echo "$out" | grep -q "no iPhone found"
       - name: Build for devices (unsigned)
         run: |
           set -o pipefail

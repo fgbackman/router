@@ -201,7 +201,20 @@ The phone talks to the router over your local network, so:
 
 Starting and stopping the router, and changing its ports, stays in the Mac app.
 
-**Installing it on your phone:** open `ios/Router.xcodeproj` in Xcode (16 or
+**Installing it on your phone from Terminal:** install Xcode, open it once and
+add your Apple ID under **Xcode › Settings › Accounts**. Then plug in your
+iPhone (unlock it and tap **Trust**) and run:
+
+```bash
+./ios/install.sh
+```
+
+It finds your Apple team and the connected iPhone, then builds, signs,
+installs and opens the app. The first time, iOS asks you to trust your
+developer account (**Settings › General › VPN & Device Management**) and may
+ask you to turn on **Developer Mode** (**Settings › Privacy & Security**).
+
+**Or from Xcode:** open `ios/Router.xcodeproj` in Xcode (16 or
 newer). Select the **Router** target, open **Signing & Capabilities**, and pick
 your team. A free Apple ID works; if Xcode says the bundle identifier is taken,
 change it to something unique such as `com.yourname.router`. Plug in your
