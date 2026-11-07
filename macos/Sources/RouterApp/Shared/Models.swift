@@ -1,5 +1,7 @@
 import Foundation
 
+// Shared by the Mac app (macos/) and the iPhone app (ios/).
+
 // Mirrors internal/config.Config in the Go daemon. Go encodes empty slices as
 // null, so array fields decode missing/null as [].
 
@@ -95,8 +97,18 @@ struct RouterConfig: Codable, Equatable {
     struct Web: Codable, Equatable {
         var enabled: Bool
         var listen: String
+        var allowLAN: Bool
         var user: String
         var passwordHash: String
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            enabled = try c.decode(Bool.self, forKey: .enabled)
+            listen = try c.decode(String.self, forKey: .listen)
+            allowLAN = try c.decodeIfPresent(Bool.self, forKey: .allowLAN) ?? false
+            user = try c.decode(String.self, forKey: .user)
+            passwordHash = try c.decodeIfPresent(String.self, forKey: .passwordHash) ?? ""
+        }
     }
 }
 

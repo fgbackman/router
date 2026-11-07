@@ -66,3 +66,37 @@ jobs:
         with:
           name: screenshot
           path: app.png
+
+  ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Build for the iOS Simulator
+        run: |
+          xcodebuild -project ios/Router.xcodeproj -target Router -configuration Debug \
+            -sdk iphonesimulator CODE_SIGNING_ALLOWED=NO SYMROOT="$PWD/ios/build" build | tail -n 40
+          test -d ios/build/Debug-iphonesimulator/Router.app
+      - name: Build for devices (unsigned)
+        run: |
+          xcodebuild -project ios/Router.xcodeproj -target Router -configuration Release \
+            -sdk iphoneos CODE_SIGNING_ALLOWED=NO SYMROOT="$PWD/ios/build" build | tail -n 5
+      - name: Run against a demo router and screenshot each tab
+        run: |
+          go run ./.github/demo &
+          for i in $(seq 1 30); do curl -sf -u admin:demo-password http://127.0.0.1:8080/api/status >/dev/null && break; sleep 1; done
+          UDID=$(xcrun simctl list devices available -j | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; print(next(x['udid'] for k,v in sorted(d.items(), reverse=True) if 'iOS' in k for x in v if x['name'].startswith('iPhone')))")
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl install "$UDID" ios/build/Debug-iphonesimulator/Router.app
+          for tab in status clients forwarding settings; do
+            SIMCTL_CHILD_ROUTER_URL=http://127.0.0.1:8080 SIMCTL_CHILD_ROUTER_APP_PASSWORD=demo-password SIMCTL_CHILD_ROUTER_TAB=$tab \
+              xcrun simctl launch "$UDID" com.fgbackman.router.ios
+            sleep 8
+            xcrun simctl io "$UDID" screenshot "ios-$tab.png"
+            xcrun simctl terminate "$UDID" com.fgbackman.router.ios
+            sips -Z 900 -s format jpeg -s formatOptions 60 "ios-$tab.png" --out "ios-$tab.jpg" >/dev/null
+            echo "SHOT-$tab-BEGIN"; base64 -i "ios-$tab.jpg" | fold -w 1000; echo "SHOT-$tab-END"
+          done

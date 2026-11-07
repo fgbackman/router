@@ -15,7 +15,7 @@ import (
 
 type backend struct{ c *config.Config }
 
-func (b *backend) Config() *config.Config        { return b.c.Clone() }
+func (b *backend) Config() *config.Config       { return b.c.Clone() }
 func (b *backend) Apply(c *config.Config) error { b.c = c.Clone(); return nil }
 func (b *backend) Status() web.Status {
 	ip := netip.MustParseAddr
@@ -37,6 +37,12 @@ func main() {
 	c := config.Default("en1", "en0")
 	c.Web.PasswordHash, _ = config.HashPassword("demo-password")
 	c.DHCP.StaticLeases = []config.StaticLease{{MAC: "aa:bb:cc:dd:ee:ff", IP: "192.168.50.20", Hostname: "nas"}}
+	c.DNS.BlockedDomains = []string{"doubleclick.net", "ads.example.com"}
+	c.DNS.Blocklists = []string{"https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"}
+	c.Firewall.PortForwards = []config.PortForward{
+		{Name: "Plex", Protocol: "tcp", ExternalPort: 32400, InternalIP: "192.168.50.20", InternalPort: 32400},
+		{Name: "Game", Protocol: "both", ExternalPort: 3074, InternalIP: "192.168.50.101", InternalPort: 3074},
+	}
 	h, err := (&web.Server{Backend: &backend{c}}).Handler()
 	if err != nil {
 		log.Fatal(err)

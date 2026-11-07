@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="100 100 824 824">
+  <defs>
+    <!-- Body: deep night-blue to indigo -->
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1b2a6b"/>
+      <stop offset="0.55" stop-color="#0f1640"/>
+      <stop offset="1" stop-color="#080b24"/>
+    </linearGradient>
+    <radialGradient id="aura" cx="0.5" cy="0.53" r="0.5">
+      <stop offset="0" stop-color="#36d6ff" stop-opacity="0.45"/>
+      <stop offset="0.45" stop-color="#3b6cff" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#3b6cff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="beam" gradientUnits="userSpaceOnUse" x1="300" y1="200" x2="760" y2="820">
+      <stop offset="0" stop-color="#7cf3ff"/>
+      <stop offset="1" stop-color="#5a7dff"/>
+    </linearGradient>
+    <radialGradient id="hub" cx="0.4" cy="0.35" r="0.75">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.35" stop-color="#b9f6ff"/>
+      <stop offset="1" stop-color="#2fb8ff"/>
+    </radialGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.22"/>
+      <stop offset="0.5" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="14" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="softglow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="7" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="drop" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#000" flood-opacity="0.35"/>
+    </filter>
+    <clipPath id="clip"><rect x="100" y="100" width="824" height="824"/></clipPath>
+  </defs>
+
+  <!-- Squircle body (macOS icon grid: 824pt body on a 1024 canvas) -->
+  <rect x="100" y="100" width="824" height="824" fill="url(#body)"/>
+  <g clip-path="url(#clip)">
+    <!-- faint grid, like a circuit/network map -->
+    <g stroke="#6f8cff" stroke-opacity="0.07" stroke-width="2">
+      <path d="M100 236H924M100 372H924M100 508H924M100 644H924M100 780H924"/>
+      <path d="M236 100V924M372 100V924M508 100V924M644 100V924M780 100V924"/>
+    </g>
+    <circle cx="512" cy="540" r="420" fill="url(#aura)"/>
+    <!-- orbit rings -->
+    <circle cx="512" cy="540" r="250" fill="none" stroke="#7cf3ff" stroke-opacity="0.22" stroke-width="5" stroke-dasharray="2 22" stroke-linecap="round"/>
+    <circle cx="512" cy="540" r="330" fill="none" stroke="#5a7dff" stroke-opacity="0.16" stroke-width="3"/>
+
+    <!-- uplink: the internet arrives from the top -->
+    <g filter="url(#softglow)">
+      <path d="M512 196 V430" stroke="url(#beam)" stroke-width="30" stroke-linecap="round"/>
+      <path d="M462 262 L512 206 L562 262" fill="none" stroke="#c8fbff" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+
+    <!-- routes fanning out to devices -->
+    <g filter="url(#softglow)" fill="none" stroke="url(#beam)" stroke-width="24" stroke-linecap="round">
+      <path d="M512 540 C 430 560, 330 600, 268 704"/>
+      <path d="M512 540 V 792"/>
+      <path d="M512 540 C 594 560, 694 600, 756 704"/>
+    </g>
+    <!-- device nodes -->
+    <g filter="url(#glow)">
+      <circle cx="268" cy="716" r="44" fill="#0f1640" stroke="#7cf3ff" stroke-width="16"/>
+      <circle cx="512" cy="808" r="44" fill="#0f1640" stroke="#7cf3ff" stroke-width="16"/>
+      <circle cx="756" cy="716" r="44" fill="#0f1640" stroke="#7cf3ff" stroke-width="16"/>
+      <circle cx="268" cy="716" r="14" fill="#c8fbff"/>
+      <circle cx="512" cy="808" r="14" fill="#c8fbff"/>
+      <circle cx="756" cy="716" r="14" fill="#c8fbff"/>
+    </g>
+    <!-- the hub -->
+    <g filter="url(#glow)">
+      <circle cx="512" cy="540" r="112" fill="#0b1236" stroke="#9ff6ff" stroke-width="10"/>
+      <circle cx="512" cy="540" r="78" fill="url(#hub)"/>
+    </g>
+    <!-- glass sheen -->
+    <rect x="100" y="100" width="824" height="420" fill="url(#sheen)"/>
+  </g>
+</svg>

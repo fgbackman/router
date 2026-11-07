@@ -181,6 +181,7 @@ struct NetworkView: View {
     @State private var end = ""
     @State private var leaseTime = ""
     @State private var webListen = ""
+    @State private var allowLAN = true
     @State private var interfaces: [NetInterface] = []
 
     var body: some View {
@@ -200,10 +201,11 @@ struct NetworkView: View {
                 }
                 Section {
                     TextField("Admin interface address", text: $webListen, prompt: Text("127.0.0.1:8080"))
+                    Toggle("Allow devices on the local network (iPhone app)", isOn: $allowLAN)
                 } header: {
                     Text("Admin")
                 } footer: {
-                    Text("This app connects here. Use the router address (e.g. 192.168.50.1:8080) to manage it from other devices, then update Settings to match.")
+                    Text("This app connects to the address above. With local network access on, phones and computers on your network can also manage the router at the router address, on the same port, with the admin password.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }
@@ -226,6 +228,7 @@ struct NetworkView: View {
         c.dhcp.rangeEnd = end.trimmingCharacters(in: .whitespaces)
         c.dhcp.leaseTime = leaseTime.trimmingCharacters(in: .whitespaces)
         c.web.listen = webListen.trimmingCharacters(in: .whitespaces)
+        c.web.allowLAN = allowLAN
     }
 
     private var dirty: Bool {
@@ -251,6 +254,7 @@ struct NetworkView: View {
         end = c.dhcp.rangeEnd
         leaseTime = c.dhcp.leaseTime.replacingOccurrences(of: "0m0s", with: "")
         webListen = c.web.listen
+        allowLAN = c.web.allowLAN
     }
 
     private func save() {

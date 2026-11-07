@@ -342,7 +342,16 @@ func (d *Daemon) startServices() {
 
 	if cfg.Web.Enabled {
 		ws := &web.Server{Backend: d, Log: d.Log}
-		run("web", func(ctx context.Context) error { return ws.Serve(ctx, cfg.Web.Listen) })
+		if _, err := ws.Handler(); err != nil { // initialise once before serving twice
+			d.setErr("web", err)
+		} else {
+			run("web", func(ctx context.Context) error { return ws.Serve(ctx, cfg.Web.Listen) })
+			if lan := cfg.WebLANAddr(); lan != "" {
+				run("web-lan", func(ctx context.Context) error { return ws.Serve(ctx, lan) })
+			} else {
+				d.setErr("web-lan", nil)
+			}
+		}
 	} else {
 		d.setErr("web", nil)
 	}

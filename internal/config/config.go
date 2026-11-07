@@ -103,7 +103,10 @@ type PortForward struct {
 type Web struct {
 	Enabled bool   `json:"enabled"`
 	Listen  string `json:"listen"`
-	User    string `json:"user"`
+	// AllowLAN also serves the admin UI and API on the router's LAN address
+	// (same port as Listen), so phones and other computers on the LAN can use it.
+	AllowLAN bool   `json:"allowLAN"`
+	User     string `json:"user"`
 	// PasswordHash is set by `router passwd`. An empty hash disables the UI.
 	PasswordHash string `json:"passwordHash"`
 }
@@ -142,7 +145,7 @@ func Default(wan, lan string) *Config {
 			Domain:  "lan",
 		},
 		Firewall: Firewall{BlockInbound: true, AllowPing: false},
-		Web:      Web{Enabled: true, Listen: "127.0.0.1:8080", User: "admin"},
+		Web:      Web{Enabled: true, Listen: "127.0.0.1:8080", AllowLAN: true, User: "admin"},
 		StateDir: DefaultStateDir,
 	}
 }
@@ -208,6 +211,19 @@ func (c *Config) LANPrefix() (netip.Prefix, error) {
 		return netip.Prefix{}, errors.New("lan.address must be IPv4")
 	}
 	return p, nil
+}
+
+// WebLANAddr is the extra LAN listen address for the admin UI, or "" when
+// AllowLAN is off or Listen already covers the LAN address.
+func (c *Config) WebLANAddr() string {
+	if !c.Web.Enabled || !c.Web.AllowLAN {
+		return ""
+	}
+	ap, err := netip.ParseAddrPort(c.Web.Listen)
+	if err != nil || ap.Addr() == c.RouterIP() || ap.Addr().IsUnspecified() {
+		return ""
+	}
+	return netip.AddrPortFrom(c.RouterIP(), ap.Port()).String()
 }
 
 // RouterIP is the LAN address without the prefix length.

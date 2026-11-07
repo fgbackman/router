@@ -62,3 +62,19 @@ func TestSanitizeHostname(t *testing.T) {
 		}
 	}
 }
+
+func TestWebLANAddr(t *testing.T) {
+	c := Default("en0", "en5")
+	if got := c.WebLANAddr(); got != "192.168.50.1:8080" {
+		t.Fatalf("got %q", got)
+	}
+	c.Web.Listen = "192.168.50.1:9000"
+	if c.WebLANAddr() != "" {
+		t.Fatal("listen already on LAN; no second listener")
+	}
+	c.Web.Listen = "127.0.0.1:8080"
+	c.Web.AllowLAN = false
+	if c.WebLANAddr() != "" {
+		t.Fatal("AllowLAN off")
+	}
+}

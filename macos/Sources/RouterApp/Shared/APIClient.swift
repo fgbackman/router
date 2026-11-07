@@ -1,4 +1,6 @@
 import Foundation
+
+// Shared by the Mac app (macos/) and the iPhone app (ios/).
 import Security
 
 enum APIError: LocalizedError {
